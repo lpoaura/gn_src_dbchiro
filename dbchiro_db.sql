@@ -1,35 +1,59 @@
-reset role;
+reset role
+;
 
 /* Prérequis, extension postgres_fdw */
-create extension if not exists postgres_fdw;
-create extension if not exists postgis;
-create extension if not exists "uuid-ossp";
+create extension if not exists postgres_fdw
+;
+
+create extension if not exists postgis
+;
+
+create extension if not exists "uuid-ossp"
+;
 
 /* Création d'un rôle spécifique à cette échange offrant la possibilité, si besoin de restreindre l'accès aux données
    via les fonctions de ROW POLICY */
-drop schema share_with_foreigndb1 cascade;
-create schema share_with_foreigndb1;
+drop schema share_with_foreigndb1 cascade
+;
 
-grant usage on schema share_with_foreigndb1 to dbchirodbuser;
-grant create on schema share_with_foreigndb1 to dbchirodbuser;
-alter default privileges in schema share_with_foreigndb1 grant all privileges on tables to dbchirodbuser;
+create schema share_with_foreigndb1
+;
+
+grant usage on schema share_with_foreigndb1 to dbchirodbuser
+;
+
+grant create on schema share_with_foreigndb1 to dbchirodbuser
+;
+
+alter default privileges in schema share_with_foreigndb1 grant all privileges on tables to dbchirodbuser
+;
 
 
 /* Création du serveur distant GeoNature */
 
-drop server if exists foreign_db1 cascade;
+drop server if exists foreign_db1 cascade
+;
 
-create server foreign_db1 foreign data wrapper postgres_fdw options (host 'foreign_host', dbname 'foreign_dbname', port 'foreign_dbport');
-create user mapping for dbchirodbuser server foreign_db1 options (user 'dbuser', password 'dbpasswd');
+create server foreign_db1 foreign data wrapper postgres_fdw options (host 'foreign_host', dbname 'foreign_dbname', port 'foreign_dbport')
+;
 
-grant usage on foreign server foreign_db1 to dbchirodbuser;
+create user mapping for dbchirodbuser server foreign_db1 options (user 'dbuser', password 'dbpasswd')
+;
+
+grant usage on foreign server foreign_db1 to dbchirodbuser
+;
 
 /* Utilisation temporaire du schéma src_dbchiro comme schéma courant */
-set search_path = 'src_dbchiro', 'public';
+set search_path = 'src_dbchiro', 'public'
+;
 
-set role dbchirodbuser;
+set role dbchirodbuser
+;
 
-import foreign schema src_dbchiro from server foreign_db1 into share_with_foreigndb1;
+drop foreign table share_with_foreigndb1.sights_place;
+
+import foreign schema src_dbchiro from server foreign_db1 into share_with_foreigndb1
+;
 
 
 /* création des fonctions d'alimentation des tables distantes */
@@ -153,14 +177,18 @@ begin
     end if;
 end;
 $$
-    language plpgsql;
+    language plpgsql
+;
 
-drop trigger if exists accounts_to_foreigndb1_trigger on public.accounts_profile;
+drop trigger if exists accounts_to_foreigndb1_trigger on public.accounts_profile
+;
+
 create trigger accounts_to_foreigndb1_trigger
     after insert or update or delete
     on public.accounts_profile
     for each row
-execute procedure update_foreign_account_profile();
+execute procedure update_foreign_account_profile()
+;
 
 -- set role dbchirodbuser;
 -- update accounts_profile
@@ -261,17 +289,22 @@ begin
     end if;
 end;
 $$
-    language plpgsql;
+    language plpgsql
+;
 
-drop trigger if exists study_to_foreigndb1_trigger on public.management_study;
+drop trigger if exists study_to_foreigndb1_trigger on public.management_study
+;
+
 create trigger study_to_foreigndb1_trigger
     after insert or update or delete
     on public.management_study
     for each row
-execute procedure update_foreign_management_study();
+execute procedure update_foreign_management_study()
+;
 
 update management_study
-set year = year;
+set year = year
+;
 
 /* info : especes */
 
@@ -338,20 +371,27 @@ begin
     end if;
 end;
 $$
-    language plpgsql;
+    language plpgsql
+;
 
-drop trigger if exists specie_to_foreigndb1_trigger on public.dicts_specie;
+drop trigger if exists specie_to_foreigndb1_trigger on public.dicts_specie
+;
+
 create trigger specie_to_foreigndb1_trigger
     after insert or update or delete
     on public.dicts_specie
     for each row
-execute procedure update_foreign_dicts_specie();
+execute procedure update_foreign_dicts_specie()
+;
 
 update dicts_specie
-set sys_order = sys_order;
+set sys_order = sys_order
+;
 
 /* info: Localités */
 
+set role dbchirodbuser
+;
 
 create or replace function update_foreign_sights_place() returns trigger as
 $$
@@ -361,7 +401,7 @@ declare
     the_domain        varchar(50);
     the_landcover     varchar(250);
     the_municipality  varchar(10);
-    the_precision     varchar(15);
+    the_precision     varchar(50);
     the_territory     varchar(50);
 begin
     if
@@ -383,7 +423,20 @@ begin
         /* populate declarde variables */
         select into the_category_type category from public.dicts_typeplace where new.type_id = dicts_typeplace.id;
         select into the_type_code code from public.dicts_typeplace where new.type_id = dicts_typeplace.id;
-
+        select into the_domain domain from public.dicts_propertydomain where new.domain_id = dicts_propertydomain.id;
+        select into the_landcover dicts_landcoverclc.label_lev3
+        from public.geodata_landcover
+                 join public.dicts_landcoverclc on geodata_landcover.code_id = dicts_landcoverclc.code_lev3
+        where new.landcover_id = geodata_landcover.id;
+        select into the_municipality code
+        from public.geodata_municipality
+        where new.municipality_id = geodata_municipality.id;
+        select into the_precision code
+        from public.dicts_placeprecision
+        where new.precision_id = dicts_placeprecision.id;
+        select into the_territory geodata_territory.name
+        from public.geodata_territory
+        where new.territory_id = geodata_territory.id;
         /* execute update or insert with declared variables */
         if (TG_OP = 'UPDATE')
         then
@@ -397,28 +450,46 @@ begin
                 proprietary        = NEW.proprietary,
                 convention         = NEW.convention,
                 altitude           = NEW.altitude,
-                altitude           = NEW.altitude,
                 id_bdcavite        = NEW.id_bdcavite,
                 comment            = NEW.comment,
                 telemetric_crossaz = NEW.telemetric_crossaz,
-                geom               = NEW.geom,
+                landcover          = the_landcover,
+                municipality       = the_municipality,
+                precision          = the_precision,
+                territory          = the_territory,
+                type_category      = the_category_type,
+                type               = the_type_code,
+                geom               = st_transform(NEW.geom, 2154),
                 timestamp_create   = NEW.timestamp_create,
                 timestamp_update   = NEW.timestamp_update,
-                timestamp_create   = NEW.timestamp_create,
                 created_by_id      = NEW.created_by_id,
-                updated_by_id      = NEW.updated_by_id,
-                where id_place = OLD.id_place;
+                updated_by_id      = NEW.updated_by_id
+            where id_place = OLD.id_place;
             if not FOUND
             then
                 -- Inserting data in new row, usually after table re-creation
-                insert into share_with_foreigndb1.sights_place(id_place, uuid, name, is_hidden, is_gite, is_managed,
-                                                               proprietary, convention, convention_file, map_file,
-                                                               photo_file, habitat, altitude, id_bdcavite,
-                                                               plan_localite, comment, other_imported_data, bdsource,
-                                                               id_bdsource, x, y, geom, timestamp_create,
-                                                               timestamp_update, domain, landcover, municipality,
-                                                               precision, territory, type_category, type, created_by_id,
-                                                               updated_by_id, telemetric_crossaz)
+                insert into share_with_foreigndb1.sights_place(id_place,
+                                                               name,
+                                                               is_hidden,
+                                                               is_gite,
+                                                               is_managed,
+                                                               proprietary,
+                                                               convention,
+                                                               altitude,
+                                                               id_bdcavite,
+                                                               comment,
+                                                               telemetric_crossaz,
+                                                               landcover,
+                                                               municipality,
+                                                               precision,
+                                                               territory,
+                                                               type_category,
+                                                               type,
+                                                               geom,
+                                                               timestamp_create,
+                                                               timestamp_update,
+                                                               created_by_id,
+                                                               updated_by_id)
                 values (NEW.id_place,
                         NEW.name,
                         NEW.is_hidden,
@@ -426,39 +497,87 @@ begin
                         NEW.is_managed,
                         NEW.proprietary,
                         NEW.convention,
-                        convention_file, map_file,
-                                                               photo_file, habitat, altitude, id_bdcavite,
-                                                               plan_localite, comment, other_imported_data, bdsource,
-                                                               id_bdsource, x, y, geom, timestamp_create,
-                                                               timestamp_update, domain, landcover, municipality,
-                                                               precision, territory, type_category, type, created_by_id,
-                                                               updated_by_id, telemetric_crossaz);
+                        NEW.altitude,
+                        NEW.id_bdcavite,
+                        NEW.comment,
+                        NEW.telemetric_crossaz,
+                        the_landcover,
+                        the_municipality,
+                        the_precision,
+                        the_territory,
+                        the_category_type,
+                        the_type_code,
+                        st_transform(NEW.geom, 2154),
+                        NEW.timestamp_create,
+                        NEW.timestamp_update,
+                        NEW.created_by_id,
+                        NEW.updated_by_id);
             end if;
             return NEW;
         elsif
             (TG_OP = 'INSERT')
         then
 -- Inserting row when raw data is inserted
-            insert into share_with_foreigndb1.dicts_specie(id, sys_order, codesp, sp_true, sci_name, full_name,
-                                                           common_name_fr, common_name_eng)
-            values (NEW.id,
-                    NEW.sys_order,
-                    NEW.codesp,
-                    NEW.sp_true,
-                    NEW.sci_name,
-                    NEW.full_name,
-                    NEW.common_name_fr,
-                    NEW.common_name_eng);
+            insert into share_with_foreigndb1.sights_place(id_place,
+                                                           name,
+                                                           is_hidden,
+                                                           is_gite,
+                                                           is_managed,
+                                                           proprietary,
+                                                           convention,
+                                                           altitude,
+                                                           id_bdcavite,
+                                                           comment,
+                                                           telemetric_crossaz,
+                                                           landcover,
+                                                           municipality,
+                                                           precision,
+                                                           territory,
+                                                           type_category,
+                                                           type,
+                                                           geom,
+                                                           timestamp_create,
+                                                           timestamp_update,
+                                                           created_by_id,
+                                                           updated_by_id)
+            values (NEW.id_place,
+                    NEW.name,
+                    NEW.is_hidden,
+                    NEW.is_gite,
+                    NEW.is_managed,
+                    NEW.proprietary,
+                    NEW.convention,
+                    NEW.altitude,
+                    NEW.id_bdcavite,
+                    NEW.comment,
+                    NEW.telemetric_crossaz,
+                    the_landcover,
+                    the_municipality,
+                    the_precision,
+                    the_territory,
+                    the_category_type,
+                    the_type_code,
+                    st_transform(NEW.geom, 2154),
+                    NEW.timestamp_create,
+                    NEW.timestamp_update,
+                    NEW.created_by_id,
+                    NEW.updated_by_id);
             return new;
         end if;
     end if;
 end;
 $$
-    language plpgsql;
+    language plpgsql
+;
 
-drop trigger if exists specie_to_foreigndb1_trigger on public.dicts_specie;
-create trigger specie_to_foreigndb1_trigger
+drop trigger if exists place_to_foreigndb1_trigger on public.sights_place
+;
+
+create trigger place_to_foreigndb1_trigger
     after insert or update or delete
-    on public.dicts_specie
+    on public.sights_place
     for each row
-execute procedure update_foreign_dicts_specie();
+execute procedure update_foreign_sights_place()
+;
+
+update sights_place set id_bdcavite = id_bdcavite;
