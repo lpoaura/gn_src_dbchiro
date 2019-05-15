@@ -1,20 +1,20 @@
+/* Prérequis, extension postgres_fdw */
+create extension if not exists postgres_fdw;
+create extension if not exists postgis;
+
 /* info; new "src_dbchiro" schema */
 drop schema if exists src_dbchiro cascade;
-create schema if not exists src_dbchiro;
+create schema src_dbchiro;
+/* Création d'un rôle spécifique à cet échange offrant la possibilité */
+
+create role share_from_dbchiro1 login encrypted password 'passwordToChange';
+grant usage on schema src_dbchiro to share_from_dbchiro1;
+alter default privileges in schema src_dbchiro grant select, insert, update, delete on tables to share_from_dbchiro1;
 
 /* info: connection to dbchiro foreign postgresql server */
-drop server if exists pg_dbchirogcra cascade;
-create server pg_dbchirogcra foreign data wrapper postgres_fdw options (host 'dbchirohost', dbname 'dbchirodbname', port 'dbchirodbport');
-
-create user mapping for geonature server pg_dbchirogcra options (user 'dbchirodbuser', password 'dbchirodbpwd');
 
 /* Utilisation temporaire du schéma src_dbchiro comme schéma courant */
 set search_path = 'src_dbchiro', 'public';
-
-/* TODO: Table des métasites */
-
-/* INFO: Table des localités */
-
 
 /* INFO : Tables simplifiée des comptes utilisateurs  */
 create table accounts_profile (
@@ -229,7 +229,5 @@ create index on sights_sighting(created_by_id);
 create index on sights_sighting(observer_id);
 create index on sights_sighting(session_id);
 create index on sights_sighting(updated_by_id);
-
-
 
 
