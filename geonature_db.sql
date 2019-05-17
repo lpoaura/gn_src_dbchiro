@@ -30,7 +30,7 @@ set search_path = 'src_dbchiro', 'public'
 ;
 
 /* INFO : Tables simplifiée des comptes utilisateurs  */
-create table accounts_profile (
+create table observers (
     id               integer unique           not null primary key,
     uuid             uuid unique,
     last_login       timestamp with time zone,
@@ -58,23 +58,23 @@ create table accounts_profile (
 )
 ;
 
-alter table accounts_profile
+alter table observers
     owner to geonature
 ;
 
-create index on accounts_profile(username)
+create index on observers(username)
 ;
 
-create index on accounts_profile(created_by)
+create index on observers(created_by)
 ;
 
-create index on accounts_profile(updated_by)
+create index on observers(updated_by)
 ;
 
 /* INFO: Table des études */
 
 -- auto-generated definition
-create table management_study (
+create table studies (
     id_study              integer                  not null primary key,
     name                  varchar(255)             not null,
     year                  varchar(10)              not null,
@@ -88,51 +88,51 @@ create table management_study (
     comment               text,
     timestamp_create      timestamp with time zone not null,
     timestamp_update      timestamp with time zone not null,
-    created_by_id         integer references accounts_profile,
-    project_manager_id    integer references accounts_profile,
-    updated_by_id         integer references accounts_profile
+    created_by_id         integer references observers,
+    project_manager_id    integer references observers,
+    updated_by_id         integer references observers
 )
 ;
 
 
-alter table management_study
+alter table studies
     owner to geonature
 ;
 
-create index on management_study(timestamp_update desc)
+create index on studies(timestamp_update desc)
 ;
 
-create index on management_study(name)
+create index on studies(name)
 ;
 
-create index on management_study(created_by_id)
+create index on studies(created_by_id)
 ;
 
-create index on management_study(name)
+create index on studies(name)
 ;
 
-create index on management_study(name)
+create index on studies(name)
 ;
 
-create index on management_study(year)
+create index on studies(year)
 ;
 
-create index on management_study(year)
+create index on studies(year)
 ;
 
-create index on management_study(created_by_id)
+create index on studies(created_by_id)
 ;
 
-create index on management_study(project_manager_id)
+create index on studies(project_manager_id)
 ;
 
-create index on management_study(updated_by_id)
+create index on studies(updated_by_id)
 ;
 
 
 /* INFO: Table des taxons */
 -- auto-generated definition
-create table dicts_specie (
+create table species (
     id              integer     not null primary key,
     sys_order       integer     not null,
     codesp          varchar(20) not null,
@@ -144,13 +144,13 @@ create table dicts_specie (
 )
 ;
 
-alter table dicts_specie
+alter table species
     owner to geonature
 ;
 
 
 /* INFO: Table des localités */
-create table sights_place (
+create table places (
     id_place           integer                  not null primary key,
     uuid               uuid unique,
     name               varchar(255)             not null,
@@ -176,66 +176,66 @@ create table sights_place (
     territory          varchar(50),
     type_category      varchar(50),
     type               varchar(50),
-    created_by_id      integer references accounts_profile,
-    updated_by_id      integer references accounts_profile,
+    created_by_id      integer references observers,
+    updated_by_id      integer references observers,
     telemetric_crossaz boolean default false    not null
 )
 ;
 
 
-alter table sights_place
+alter table places
     owner to geonature
 ;
 
-create index on sights_place(timestamp_update desc)
+create index on places(timestamp_update desc)
 ;
 
-create index on sights_place(name)
+create index on places(name)
 ;
 
-create index on sights_place(created_by_id)
+create index on places(created_by_id)
 ;
 
-create index on sights_place(territory)
+create index on places(territory)
 ;
 
-create index on sights_place(geom)
+create index on places(geom)
 ;
 
-create index on sights_place(is_hidden)
+create index on places(is_hidden)
 ;
 
-create index on sights_place(is_gite)
+create index on places(is_gite)
 ;
 
-create index on sights_place(is_managed)
+create index on places(is_managed)
 ;
 
-create index on sights_place(proprietary)
+create index on places(proprietary)
 ;
 
-create index on sights_place(domain)
+create index on places(domain)
 ;
 
-create index on sights_place(landcover)
+create index on places(landcover)
 ;
 
-create index on sights_place(municipality)
+create index on places(municipality)
 ;
 
-create index on sights_place(precision)
+create index on places(precision)
 ;
 
-create index on sights_place(type)
+create index on places(type)
 ;
 
-create index on sights_place(updated_by_id)
+create index on places(updated_by_id)
 ;
 
 /* info: Table des sessions */
 
 -- auto-generated definition
-create table sights_session (
+create table sessions (
     id_session       integer                  not null primary key,
     name             varchar(150)             not null,
     date_start       date                     not null,
@@ -248,79 +248,83 @@ create table sights_session (
     timestamp_create timestamp with time zone not null,
     timestamp_update timestamp with time zone not null,
     contact          varchar(10),
-    created_by_id    integer references accounts_profile,
-    main_observer_id integer references accounts_profile,
+    created_by_id    integer references observers,
+    main_observer_id integer references observers,
     place_id         integer                  not null
-        references sights_place,
+        references places,
     study_id         integer
-        references management_study,
-    updated_by_id    integer references accounts_profile
+        references studies,
+    updated_by_id    integer references observers
 )
 ;
 
-alter table sights_session
+alter table sessions
     owner to geonature
 ;
 
-create index on sights_session(contact)
+create index on sessions(contact)
 ;
 
-create index on sights_session(created_by_id)
+create index on sessions(created_by_id)
 ;
 
-create index on sights_session(main_observer_id)
+create index on sessions(main_observer_id)
 ;
 
-create index on sights_session(place_id)
+create index on sessions(place_id)
 ;
 
-create index on sights_session(study_id)
+create index on sessions(study_id)
 ;
 
-create index on sights_session(updated_by_id)
+create index on sessions(updated_by_id)
 ;
 
 /* info; Table des observations */
 
 -- auto-generated definition
-create table sights_sighting (
+
+create table sightings (
     id_sighting      integer                  not null primary key,
+    codesp_id        integer                  not null references species,
+    codesp           varchar(20),
+    common_name      varchar(250),
+    sciname          varchar(250),
+    sptrue           boolean,
     period           varchar(50),
     total_count      integer,
     breed_colo       boolean,
     is_doubtful      boolean                  not null,
     id_bdsource      text,
-    bdsource         varchar(100),
+    bdsource         text,
     comment          text,
+    observer_id      integer references observers,
+    session_id       integer                  not null
+        references sessions,
     timestamp_create timestamp with time zone not null,
     timestamp_update timestamp with time zone not null,
-    codesp_id        integer                  not null
-        references dicts_specie,
-    created_by_id    integer references accounts_profile,
-    observer_id      integer references accounts_profile,
-    session_id       integer                  not null
-        references sights_session,
-    updated_by_id    integer references accounts_profile
+    created_by_id    integer references observers,
+    updated_by_id    integer references observers
 )
 ;
 
-alter table sights_sighting
+alter table sightings
     owner to geonature
 ;
 
-create index on sights_sighting(codesp_id)
+create index on sightings(codesp_id)
 ;
 
-create index on sights_sighting(created_by_id)
+create index on sightings(created_by_id)
 ;
 
-create index on sights_sighting(observer_id)
+create index on sightings(observer_id)
 ;
 
-create index on sights_sighting(session_id)
+create index on sightings(session_id)
 ;
 
-create index on sights_sighting(updated_by_id)
+create index on sightings(updated_by_id)
 ;
 
 
