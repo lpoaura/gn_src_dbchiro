@@ -326,5 +326,3 @@ create index on sightings(session_id)
 
 create index on sightings(updated_by_id)
 ;
-
-
