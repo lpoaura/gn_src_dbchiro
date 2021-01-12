@@ -124,7 +124,6 @@ CREATE OR REPLACE FUNCTION src_dbchirogcra.fct_tri_c_upsert_dataset() RETURNS TR
 AS
 $$
 BEGIN
-    RAISE NOTICE 'NEW %', new;
     INSERT INTO
         gn_meta.t_datasets ( id_acquisition_framework
                            , unique_dataset_id
