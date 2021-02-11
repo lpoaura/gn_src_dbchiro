@@ -55,15 +55,21 @@ COMMENT ON FUNCTION src_dbchirogcra.fct_c_get_or_insert_basic_acquisition_framew
 
 /* Function to get id_dataset from id_study */
 
-DROP FUNCTION IF EXISTS src_dbchirogcra.fct_c_get_dataset_from_id_dataset(_id_study INT)
+DROP FUNCTION IF EXISTS src_dbchirogcra.fct_c_get_dataset_from_id_study(_id_study INT)
 ;
 
-CREATE OR REPLACE FUNCTION src_dbchirogcra.fct_c_get_dataset_from_id_dataset(_id_study INT) RETURNS INTEGER
+CREATE OR REPLACE FUNCTION src_dbchirogcra.fct_c_get_dataset_from_id_study(_id_study INT) RETURNS INTEGER
 AS
 $$
 DECLARE
     the_id_dataset INT ;
 BEGIN
+    IF (SELECT
+            exists(SELECT 1 FROM
+            gn_meta.t_datasets
+                JOIN src_dbchirogcra.management_study ON unique_dataset_id = uuid
+        WHERE
+            id_study = _id_study)) THEN
     SELECT
         id_dataset
         INTO the_id_dataset
@@ -72,15 +78,21 @@ BEGIN
                 JOIN src_dbchirogcra.management_study ON unique_dataset_id = uuid
         WHERE
             id_study = _id_study;
+    ELSE
+        SELECT id_dataset INTO the_id_dataset
+        FROM
+            gn_meta.t_datasets where t_datasets.dataset_shortname like gn_commons.get_default_parameter(
+            'dbchiro_default_dataset_shortname') ;
+        END IF;
     RETURN the_id_dataset;
 END
 $$ LANGUAGE plpgsql
 ;
 
-ALTER FUNCTION src_dbchirogcra.fct_c_get_dataset_from_id_dataset(_id_study INT) OWNER TO geonature
+ALTER FUNCTION src_dbchirogcra.fct_c_get_dataset_from_id_study(_id_study INT) OWNER TO geonature
 ;
 
-COMMENT ON FUNCTION src_dbchirogcra.fct_c_get_dataset_from_id_dataset(_id_study INT) IS 'function to basically create acquisition framework'
+COMMENT ON FUNCTION src_dbchirogcra.fct_c_get_dataset_from_id_study(_id_study INT) IS 'function to basically create acquisition framework'
 ;
 
 /* New function to get acquisition framework id by name */
